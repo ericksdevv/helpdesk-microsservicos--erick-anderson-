@@ -1,6 +1,6 @@
 # HelpDesk TI · Arquitetura em Microsserviços
 
-> **Vídeo de demonstração (4 a 6 min):** `[INSIRA_AQUI_O_LINK_DO_VIDEO]` *(YouTube não listado ou Google Drive público para quem tiver o link — roteiro completo em [ROTEIRO-VIDEO.md](ROTEIRO-VIDEO.md))*
+> **Vídeo de demonstração:** https://www.youtube.com/watch?v=0mys17eRyRk
 
 Sistema de chamados de TI evoluído de um monólito FastAPI para uma **arquitetura em microsserviços desacoplada, resiliente e orientada a eventos**, mantendo todas as funcionalidades, regras de SLA e garantias de segurança do projeto original ([DESAFIO.md](DESAFIO.md)).
 
