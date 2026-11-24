@@ -31,12 +31,13 @@ header span { opacity: .82; font-size: 12px; }
 header .usuario { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 header .usuario button { background: #2b3a5c; }
 header .usuario .btn-header { background: #244780; }
-main { max-width: 1180px; margin: 0 auto; padding: 18px 24px; display: grid; gap: 16px; }
-.grade { display: grid; grid-template-columns: 1fr 330px; gap: 18px; align-items: start; }
-@media (max-width: 900px) { .grade { grid-template-columns: 1fr; } }
+main { max-width: 1180px; margin: 0 auto; padding: 18px 24px; display: grid; gap: 16px; min-width: 0; }
+main > *, .grade > * { min-width: 0; }
+.grade { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grade { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { main, header { padding: 12px; } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
-h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--mut); }
+h2, h3 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--mut); }
 .saude-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .saude-cabecalho h2 { margin: 0; }
 .saude-resumo { font-size: 12px; font-weight: 600; color: var(--mut); }
@@ -55,10 +56,10 @@ h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacin
 .svc-degradado { border-color: #f6d58e; background: #fff8e6; color: var(--warn); }
 .svc-offline { border-color: #f3b8b3; background: #fef1f0; color: var(--bad); }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
 .kpi small { color: var(--mut); }
 .kpi b { display: block; font-size: 22px; }
-.tabela-wrap { overflow-x: auto; }
+.tabela-wrap { overflow-x: auto; max-width: 100%; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 12px; color: var(--mut); }
