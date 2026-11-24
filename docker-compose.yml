@@ -1,15 +1,63 @@
 services:
-  helpdesk:
-    build: .
-    ports:
-      - "127.0.0.1:8000:8000"   # só acessível pelo próprio computador
+  init-segredo:
+    image: python:3.12-slim
+    command:
+      - python
+      - -c
+      - |
+        import os, secrets
+        os.makedirs('/segredos', exist_ok=True)
+        os.chown('/segredos', 10001, 10001)
+        arq = '/segredos/jwt_segredo'
+        if not os.path.exists(arq) or os.path.getsize(arq) < 32:
+            with open(arq, 'w', encoding='utf-8') as f:
+                f.write(secrets.token_urlsafe(48))
+        os.chown(arq, 10001, 10001)
+        os.chmod(arq, 0o440)
+    volumes:
+      - segredos:/segredos
+    networks:
+      - helpdesk-rede
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - dados_redis:/data
+    networks:
+      - helpdesk-rede
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  usuarios:
+    build: ./servicos/usuarios
     env_file:
       - path: .env
         required: false
     environment:
       DADOS_EXEMPLO: ${DADOS_EXEMPLO:-1}
+      SENHA_EXEMPLO: ${SENHA_EXEMPLO:-Helpdesk2026}
+      TOKEN_MINUTOS: ${TOKEN_MINUTOS:-60}
+      DOCS: ${DOCS:-1}
+      JWT_SEGREDO: ${JWT_SEGREDO:-}
+      JWT_SEGREDO_FILE: /segredos/jwt_segredo
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: sqlite:////dados/usuarios.db
+    depends_on:
+      init-segredo:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     volumes:
-      - dados:/dados
+      - dados_usuarios:/dados
+      - segredos:/segredos:ro
+    networks:
+      - helpdesk-rede
     read_only: true
     tmpfs:
       - /tmp
@@ -17,6 +65,163 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  inventario:
+    build: ./servicos/inventario
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DADOS_EXEMPLO: ${DADOS_EXEMPLO:-1}
+      DOCS: ${DOCS:-1}
+      JWT_SEGREDO: ${JWT_SEGREDO:-}
+      JWT_SEGREDO_FILE: /segredos/jwt_segredo
+      DATABASE_URL: sqlite:////dados/inventario.db
+    depends_on:
+      init-segredo:
+        condition: service_completed_successfully
+    volumes:
+      - dados_inventario:/dados
+      - segredos:/segredos:ro
+    networks:
+      - helpdesk-rede
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  chamados:
+    build: ./servicos/chamados
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DADOS_EXEMPLO: ${DADOS_EXEMPLO:-1}
+      DOCS: ${DOCS:-1}
+      JWT_SEGREDO: ${JWT_SEGREDO:-}
+      JWT_SEGREDO_FILE: /segredos/jwt_segredo
+      USUARIOS_URL: http://usuarios:8000
+      INVENTARIO_URL: http://inventario:8000
+      REDIS_URL: redis://redis:6379/0
+      HTTP_TIMEOUT_SEGUNDOS: ${HTTP_TIMEOUT_SEGUNDOS:-2.5}
+      CIRCUIT_BREAKER_LIMITE_FALHAS: ${CIRCUIT_BREAKER_LIMITE_FALHAS:-2}
+      CIRCUIT_BREAKER_RESET_SEGUNDOS: ${CIRCUIT_BREAKER_RESET_SEGUNDOS:-5.0}
+      DATABASE_URL: sqlite:////dados/chamados.db
+    depends_on:
+      init-segredo:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - dados_chamados:/dados
+      - segredos:/segredos:ro
+    networks:
+      - helpdesk-rede
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  notificacoes:
+    build: ./servicos/notificacoes
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DOCS: ${DOCS:-1}
+      JWT_SEGREDO: ${JWT_SEGREDO:-}
+      JWT_SEGREDO_FILE: /segredos/jwt_segredo
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: sqlite:////dados/notificacoes.db
+    depends_on:
+      init-segredo:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - dados_notificacoes:/dados
+      - segredos:/segredos:ro
+    networks:
+      - helpdesk-rede
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build: ./servicos/gateway
+    ports:
+      - "127.0.0.1:8000:8000"   # único ponto exposto para fora da rede Docker
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DOCS: ${DOCS:-1}
+      USUARIOS_URL: http://usuarios:8000
+      INVENTARIO_URL: http://inventario:8000
+      CHAMADOS_URL: http://chamados:8000
+      NOTIFICACOES_URL: http://notificacoes:8000
+    depends_on:
+      usuarios:
+        condition: service_started
+      inventario:
+        condition: service_started
+      chamados:
+        condition: service_started
+      notificacoes:
+        condition: service_started
+    networks:
+      - helpdesk-rede
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude', timeout=3)"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+
+networks:
+  helpdesk-rede:
+    driver: bridge
 
 volumes:
-  dados:
+  segredos:
+  dados_redis:
+  dados_usuarios:
+  dados_inventario:
+  dados_chamados:
+  dados_notificacoes:
