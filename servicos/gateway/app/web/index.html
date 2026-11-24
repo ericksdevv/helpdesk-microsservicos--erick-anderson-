@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelpDesk TI · Microsserviços</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<header>
+  <div><b>HelpDesk TI</b> <span>· arquitetura em microsserviços</span></div>
+  <div class="usuario" id="barra" hidden>
+    <span id="quem"></span>
+    <button id="atualizar" type="button" class="btn-header">Atualizar</button>
+    <button id="sair" type="button">Sair</button>
+  </div>
+</header>
+
+<form class="card login" id="tela-login">
+  <h1>Entrar</h1>
+  <p>Use seu e-mail e senha.</p>
+  <label for="email">E-mail</label>
+  <input id="email" type="email" autocomplete="username" required value="carla@empresa.com">
+  <label for="senha">Senha</label>
+  <input id="senha" type="password" autocomplete="current-password" required>
+  <p><button type="submit">Entrar</button></p>
+  <div id="erro-login" class="erro" role="alert" aria-live="polite"></div>
+  <div class="contas">
+    Contas de exemplo (senha definida em <code>SENHA_EXEMPLO</code>, veja o README):<br>
+    <code>admin@empresa.com</code> administrador · <code>carla@empresa.com</code> técnica · <code>ana@empresa.com</code> solicitante
+  </div>
+</form>
+
+<main id="tela-sistema" hidden>
+  <div class="card saude-card" aria-label="Estado dos microsserviços">
+    <div class="saude-cabecalho">
+      <h2>Saúde dos microsserviços</h2>
+      <span id="saude-resumo" class="saude-resumo" aria-live="polite"></span>
+    </div>
+    <div class="saude-lista" id="saude-servicos"></div>
+  </div>
+
+  <div class="grade">
+    <section>
+      <div class="kpis" id="kpis"></div>
+      <div class="card">
+        <h2>Chamados</h2>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Chamado</th>
+                <th>Prioridade</th>
+                <th>Status</th>
+                <th>Técnico</th>
+                <th>Prazo (SLA)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista"></tbody>
+          </table>
+        </div>
+        <div id="erro" class="erro" role="alert" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <form class="card" id="novo">
+        <h2>Abrir chamado</h2>
+        <label for="titulo">Título</label>
+        <input id="titulo" required minlength="3" maxlength="120" value="Sem acesso à internet">
+        <label for="descricao">Descrição</label>
+        <textarea id="descricao" rows="2" required minlength="3" maxlength="2000">O cabo está conectado, mas não navega.</textarea>
+        <label for="prioridade">Prioridade</label>
+        <select id="prioridade">
+          <option value="baixa">Baixa (72 h)</option>
+          <option value="media">Média (24 h)</option>
+          <option value="alta" selected>Alta (8 h)</option>
+          <option value="critica">Crítica (4 h)</option>
+        </select>
+        <label for="ativo">Equipamento</label>
+        <select id="ativo"></select>
+        <p><button type="submit">Abrir chamado</button></p>
+      </form>
+
+      <details class="card" id="box-ativo" hidden>
+        <summary>Cadastrar equipamento</summary>
+        <form id="form-ativo" class="subform">
+          <label for="ativo-pat">Patrimônio</label>
+          <input id="ativo-pat" required minlength="3" maxlength="30" pattern="[A-Za-z0-9-]+" placeholder="PAT-0004">
+          <label for="ativo-tipo">Tipo</label>
+          <select id="ativo-tipo">
+            <option value="computador">Computador</option>
+            <option value="notebook">Notebook</option>
+            <option value="impressora">Impressora</option>
+            <option value="rede">Rede</option>
+            <option value="outro">Outro</option>
+          </select>
+          <label for="ativo-desc">Descrição</label>
+          <input id="ativo-desc" required minlength="2" maxlength="200" placeholder="Switch Cisco 24p">
+          <label for="ativo-setor">Setor</label>
+          <input id="ativo-setor" required minlength="2" maxlength="80" placeholder="Infraestrutura">
+          <p><button type="submit">Salvar equipamento</button></p>
+        </form>
+      </details>
+
+      <details class="card" id="box-usuario" hidden>
+        <summary>Cadastrar usuário</summary>
+        <form id="form-usuario" class="subform">
+          <label for="usu-nome">Nome</label>
+          <input id="usu-nome" required minlength="2" maxlength="120" placeholder="Marina Alves">
+          <label for="usu-email">E-mail</label>
+          <input id="usu-email" type="email" required placeholder="marina@empresa.com">
+          <label for="usu-perfil">Perfil</label>
+          <select id="usu-perfil">
+            <option value="solicitante">Solicitante</option>
+            <option value="tecnico">Técnico</option>
+            <option value="admin">Administrador</option>
+          </select>
+          <label for="usu-senha">Senha</label>
+          <input id="usu-senha" type="password" required minlength="8" maxlength="128" placeholder="Mínimo 8 chars (letras e números)">
+          <p><button type="submit">Criar usuário</button></p>
+        </form>
+      </details>
+
+      <div class="card">
+        <h2>Minhas notificações</h2>
+        <div id="avisos" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<dialog id="modal-chamado" aria-labelledby="modal-titulo">
+  <div class="modal-topo">
+    <h2 id="modal-titulo">Detalhes do chamado</h2>
+    <button type="button" id="fechar-modal" class="sec">Fechar</button>
+  </div>
+  <div id="modal-corpo"></div>
+  <form id="form-comentario" class="subform">
+    <label for="texto-comentario">Novo comentário</label>
+    <textarea id="texto-comentario" rows="2" required minlength="1" maxlength="2000" placeholder="Registre uma atualização ou dúvida..."></textarea>
+    <p><button type="submit" id="btn-comentar">Enviar comentário</button></p>
+    <div id="erro-modal" class="erro" role="alert" aria-live="polite"></div>
+  </form>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>
