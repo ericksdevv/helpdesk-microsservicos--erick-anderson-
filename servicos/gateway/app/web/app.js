@@ -118,14 +118,14 @@ async function carregar() {
   const [saude, lista, ativos, chamados, painel, avisos] = await Promise.all([
     req("GET", "/saude").catch(() => null),
     tentar("/usuarios", []),
-    tentar("/ativos", []),
+    tentar("/ativos", null),
     tentar("/chamados", []),
     tentar("/chamados/painel", { total: 0, por_status: {}, atrasados: 0 }),
     tentar("/notificacoes", []),
   ]);
 
   usuarios = lista;
-  ativosLista = ativos;
+  if (ativos !== null) ativosLista = ativos;
   chamadosLista = chamados;
 
   renderizarSaude(saude);
@@ -151,9 +151,13 @@ async function carregar() {
 
   renderizarAvisos(avisos);
   $("erro").textContent = [...new Set(avisosDeFalha)].join(" ");
-  $("ativo").innerHTML = `<option value="">Nenhum</option>` + ativos.map((a) =>
-    `<option value="${esc(a.id)}">${esc(a.patrimonio)} · ${esc(a.descricao)}</option>`
-  ).join("");
+  if (ativos !== null || $("ativo").options.length === 0) {
+    const selecionado = $("ativo").value;
+    $("ativo").innerHTML = `<option value="">Nenhum</option>` + ativosLista.map((a) =>
+      `<option value="${esc(a.id)}">${esc(a.patrimonio)} · ${esc(a.descricao)}</option>`
+    ).join("");
+    if (selecionado) $("ativo").value = selecionado;
+  }
 
   if (chamadoModalId !== null && $("modal-chamado").open) {
     renderizarModal(chamadoModalId);
