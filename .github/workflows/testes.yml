@@ -1,13 +1,17 @@
-name: Testes e segurança
+name: Testes e segurança por serviço
 on: [push, pull_request]
 
-# O workflow só pode ler o código (privilégio mínimo)
 permissions:
   contents: read
 
 jobs:
-  testes:
+  servico:
+    name: Testes · ${{ matrix.servico }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        servico: [usuarios, inventario, chamados, notificacoes, gateway]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -15,8 +19,33 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install -r requirements-dev.txt
-      - name: Testes (inclui testes de segurança)
+      - name: Instalar dependências de ${{ matrix.servico }}
+        run: pip install -r servicos/${{ matrix.servico }}/requirements-dev.txt
+      - name: Testes unitários e de segurança (${{ matrix.servico }})
+        working-directory: servicos/${{ matrix.servico }}
         run: pytest -q
-      - name: Dependências com falhas conhecidas
-        run: pip-audit -r requirements.txt
+      - name: Auditoria de dependências (${{ matrix.servico }})
+        run: pip-audit -r servicos/${{ matrix.servico }}/requirements.txt
+
+  integracao-e2e:
+    name: Integração ponta a ponta (5 processos + Redis)
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências E2E
+        run: pip install -r requirements-dev.txt
+      - name: Rodar fluxo completo pelos microsserviços reais
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: pytest -q
